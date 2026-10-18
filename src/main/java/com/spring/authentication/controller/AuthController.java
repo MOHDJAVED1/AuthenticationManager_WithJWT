@@ -11,11 +11,14 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.spring.authentication.entity.AdminRegistraionRequest;
 import com.spring.authentication.entity.LoginRequest;
+import com.spring.authentication.entity.LoginResponse;
 import com.spring.authentication.entity.RegisterResponse;
 import com.spring.authentication.entity.RegisterUser;
 import com.spring.authentication.entity.ResetPasswordRequest;
-import com.spring.authentication.service.AuthenticationService;
+import com.spring.authentication.service.AdminInvitationService;
+import com.spring.authentication.service.AuthService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +28,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthController {
 
-	private final AuthenticationService service;
+	private final AuthService service;
+	private final AdminInvitationService adminInvitationService;
 
 	@PostMapping("/login")
-	public String login(@RequestBody LoginRequest request) {
-		return service.login(request);
+	public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+		LoginResponse response = service.login(request);
+		return ResponseEntity.ok(response);
 	}
 
 	@PostMapping("/logout")
@@ -58,21 +63,30 @@ public class AuthController {
 	@PostMapping("/reset-password")
 	public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
 		service.resetPassowrd(request);
-		return ResponseEntity.ok(Map.of("message", "Password reset successful"));
+		return ResponseEntity
+				.ok(Map
+						.of("message", "Password reset successful"));
 	}
 
 	@PostMapping("/forgot-password")
 	public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) {
+		
 		String email = request.get("email");
-
 		if (email == null || email.isBlank()) {
 			return ResponseEntity.badRequest().body(Map.of("message", "Email is required"));
 		}
-
 		String token = service.requestReset(email);
+		return ResponseEntity
+				.ok(Map
+						.of("message", "Reset token generated for development",
+								"resetToken", token));
 
-		return ResponseEntity.ok(Map.of("message", "Reset token generated for development", "resetToken", token));
-
+	}
+	
+	@PostMapping("/admin-registration")
+	public ResponseEntity<?> registerAdmin(@RequestBody AdminRegistraionRequest request){
+		adminInvitationService.registerAdmin(request.getName(), request.getEmail(), request.getPassword(), request.getToken());
+		return ResponseEntity.ok(Map.of("message","Admin registered successfully"));
 	}
 
 }
