@@ -40,7 +40,7 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n    \"name\" : \"Mohd Javed\",\r\n    \"email\" : \"JAVEDKHAn1078692@gmail.com\",\r\n    \"password\" : \"Javed@078692\"\r\n}",
+          "raw": "{\r\n    \"name\" : \"Vikas Mishra\",\r\n    \"email\" : \"vikastest@gmail.com\",\r\n    \"password\" : \"Vikas@078692\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -48,21 +48,114 @@
           }
         },
         "url": {
-          "raw": "http://localhost:8080/api/v1/auth/register",
-          "protocol": "http",
+          "raw": "{{baseUrl}}/auth/register",
           "host": [
-            "localhost"
+            "{{baseUrl}}"
           ],
-          "port": "8080",
           "path": [
-            "api",
-            "v1",
             "auth",
             "register"
           ]
         }
       },
-      "response": []
+      "response": [
+        {
+          "name": "/register",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\" : \"Mohd Javed\",\r\n    \"email\" : \"JAVEDKHAn1078692@gmail.com\",\r\n    \"password\" : \"Javed@078692\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "_postman_previewlanguage": "json",
+          "header": null,
+          "cookie": [],
+          "body": ""
+        }
+      ]
+    },
+    {
+      "name": "/admin-registration",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\" : \"Vikas Mishra\",\r\n    \"email\" : \"vikastest@gmail.com\",\r\n    \"password\" : \"Vikas@078692\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "/register",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\" : \"Mohd Javed\",\r\n    \"email\" : \"JAVEDKHAn1078692@gmail.com\",\r\n    \"password\" : \"Javed@078692\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "_postman_previewlanguage": "json",
+          "header": null,
+          "cookie": [],
+          "body": ""
+        }
+      ]
     },
     {
       "name": "/login",
@@ -71,7 +164,7 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n    \"email\":\"javedkhan1078692@gmail.com\",\r\n    \"password\":\"Javed@078692\"\r\n}",
+          "raw": "{\r\n    \"email\" : \"vikastest@gmail.com\",\r\n    \"password\" : \"Vikas@078692\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -88,7 +181,66 @@
           ]
         }
       },
-      "response": []
+      "response": [
+        {
+          "name": "/login",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\":\"javedkhan1078692@gmail.com\",\r\n    \"password\":\"Javed@078692\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "_postman_previewlanguage": "json",
+          "header": null,
+          "cookie": [],
+          "body": ""
+        },
+        {
+          "name": "/login",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\" : \"vikastest@gmail.com\",\r\n    \"password\" : \"Vikas@078692\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "_postman_previewlanguage": "json",
+          "header": null,
+          "cookie": [],
+          "body": ""
+        }
+      ]
     },
     {
       "name": "/logout",
@@ -167,12 +319,74 @@
         }
       },
       "response": []
+    },
+    {
+      "name": "/admin/dashboard",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/super-admin/dashboard",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/super-admin/admin",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/super-admin/admin",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "super-admin",
+            "admin"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/admin-invitation",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/send-email",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
     }
   ],
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080/api/v1/auth"
+      "value": "http://localhost:8080/api/v1"
     }
   ]
 }
