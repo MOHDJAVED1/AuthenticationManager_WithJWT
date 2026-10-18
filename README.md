@@ -1,459 +1,288 @@
-Secure Auth API — API Documentation
 
-1. Project Overview
+# 🔐 Secure Auth API
 
-Project: Secure Auth API
-Technology: Java 17, Spring Boot, Spring Security, JWT, Spring Data JPA, MySQL
-Base URL: "http://localhost:8080"
-API Version: "v1"
-Content-Type: "application/json"
+A Spring Boot REST API for secure authentication, JWT-based authorization, password recovery, and role-based admin management.
 
-Features
+## 📌 Overview
 
-- User registration
-- Login using email and password
+**Secure Auth API** is a backend application built using Java and Spring Boot. It demonstrates secure user authentication, password encryption, JWT validation, role-based access control, email notifications, and invitation-based admin registration.
+
+The project is designed as a learning project to understand how authentication and authorization work in a real-world backend application.
+
+## ✨ Features
+
+### 🔑 Authentication & Authorization
+- User registration and login
 - JWT-based authentication
-- Logout with JWT revocation
-- Forgot password and reset password
-- BCrypt password hashing
-- Admin and normal user roles
-- Admin can enable or disable user accounts
-- Protected APIs for authenticated users
+- Role-based access control (RBAC)
+- Support for `ROLE_USER`, `ROLE_ADMIN`, and `ROLE_SUPER_ADMIN`
+- Secure password hashing using BCrypt
+- Logout with revoked-token validation
+
+### 📧 Email Integration
+- Gmail SMTP integration using Spring Boot Mail
+- Email service reusable across application modules
+- Email-based admin invitations
+- Password-reset email notifications
+
+### 🔄 Password Management
+- Forgot password API
+- Reset password using a secure token
+- Token expiry validation
+- Password updates using BCrypt hashing
+
+### 👑 Admin Management
+- Invitation-based admin registration
+- Time-limited invitation tokens
+- Single-use invitation validation
+- Super Admin protected endpoints
+- Optional direct admin creation by Super Admin
+
+### 🛡️ Security
+- Spring Security integration
+- JWT role claim validation
+- Protected endpoints based on user roles
+- Public authentication endpoints with token-based business validation
+- Request validation using Jakarta Validation
+
+> Note: Keep only features that are implemented and tested in your current branch.
+
+## 🧰 Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Java 17 | Programming language |
+| Spring Boot | Backend framework |
+| Spring Security | Authentication and authorization |
+| Spring Web | REST API development |
+| Spring Data JPA | Database access |
+| Hibernate | ORM |
+| MySQL | Relational database |
+| JWT | Token-based authentication |
+| BCrypt | Password hashing |
+| Spring Boot Mail | Email notifications |
+| Maven | Build and dependency management |
+| Postman | API testing |
+| Lombok | Boilerplate reduction, where used |
+
+## 🏗️ Application Architecture
+
+```text
+                  Client / Postman
+                         |
+                         v
+                Spring Security
+                         |
+                         v
+                    Controller
+                         |
+                         v
+                     Service
+                    /       \
+                   v         v
+             Repository   EmailService
+                  |            |
+                  v            v
+                MySQL      Gmail SMTP
+```
+
+### Request Flow
+
+1. The client sends an HTTP request.
+2. Spring Security checks authentication and authorization rules.
+3. The controller receives and validates the request.
+4. The service executes business logic.
+5. The repository interacts with MySQL when required.
+6. EmailService sends email notifications when required.
+7. The API returns an appropriate HTTP response.
+
+## 📋 Prerequisites
+
+Before running the project, install:
+
+- JDK 17 or the JDK version configured in the project
+- Maven
+- MySQL Server
+- Postman
+- Gmail account with 2-Step Verification and an App Password for SMTP
+
+## ⚙️ Configuration
+
+### 1. Create the database
+
+Execute the following SQL statement in MySQL:
+
+```sql
+CREATE DATABASE secure_auth_db;
+```
 
-«Implementation status: Registration, login, and JWT logout have been developed during this project. Password-reset APIs are under development. Admin management APIs are planned. Verify each endpoint against the current code before treating this document as the final API contract.»
+### 2. Configure application.properties
 
----
-
-2. Authentication Rules
-
-Endpoint| Method| Authentication
-"/api/v1/auth/register"| POST| Public
-"/api/v1/auth/login"| POST| Public
-"/api/v1/auth/logout"| POST| JWT required
-"/api/v1/auth/forgot-password"| POST| Public
-"/api/v1/auth/reset-password"| POST| Public + valid reset token
-"/api/v1/admin/users"| GET| Admin only
-"/api/v1/admin/users/{id}/status"| PATCH| Admin only
-
-For protected APIs, send the JWT in the request header:
-
-Authorization: Bearer <access-token>
-
-Do not send the JWT in the URL or request body.
-
----
-
-3. User Registration API
-
-Endpoint
-
-"POST /api/v1/auth/register"
-
-Description
-
-Registers a new user account. The server should assign "ROLE_USER" by default. Public registration must never allow users to assign themselves the admin role.
-
-Request Payload
-
-{
-  "name": "Mohd Javed",
-  "email": "javed@example.com",
-  "password": "StrongPassword123"
-}
-
-Successful Response — "201 Created"
-
-{
-  "id": 1,
-  "name": "Mohd Javed",
-  "email": "javed@example.com",
-  "message": "Registration successful"
-}
-
-The actual response status and field names depend on the existing controller implementation.
-
-Possible Errors
-
-- "400 Bad Request" — invalid request fields or password validation failure.
-- "409 Conflict" — email already registered, if implemented with this status.
-
-Security
-
-- Hash passwords using BCrypt.
-- Never return the password or password hash.
-- Assign "ROLE_USER" on the server.
-
----
-
-4. User Login API
-
-Endpoint
-
-"POST /api/v1/auth/login"
-
-Description
-
-Authenticates both admin and normal users. The server determines the user's role from the database.
-
-Request Payload
-
-{
-  "email": "javed@example.com",
-  "password": "StrongPassword123"
-}
-
-Successful Response
-
-If the current controller returns a JWT as a string, the response may be a JSON string. A recommended response format is:
-
-{
-  "accessToken": "<jwt-token>",
-  "tokenType": "Bearer",
-  "expiresIn": 900
-}
-
-The token should contain the subject, unique token ID ("jti"), expiry, and role claim.
-
-Possible Errors
-
-- "400 Bad Request" — invalid request fields.
-- "401 Unauthorized" — invalid email/password or disabled account.
-
-Security
-
-- Never store passwords in plain text.
-- Use BCrypt to verify the password.
-- Do not trust a role supplied in the request.
-- Do not issue a token to a disabled user.
-
----
-
-5. User Logout API
-
-Endpoint
-
-"POST /api/v1/auth/logout"
-
-Description
-
-Logs out the current user by revoking the presented JWT.
-
-Request Headers
-
-Authorization: Bearer <access-token>
-
-Request Body
-
-No body required.
-
-Successful Response — "200 OK"
-
-{
-  "message": "Logout successful"
-}
-
-The response shape may differ if the current controller returns a plain string.
-
-Possible Errors
-
-- "401 Unauthorized" — missing, expired, invalid, or revoked token.
-- "403 Forbidden" — access denied by an authorization rule, if applicable.
-
-Expected Behaviour
-
-1. The server validates the JWT.
-2. It reads the JWT's "jti" and expiration time.
-3. It stores the token ID in the "revoked_tokens" table.
-4. Spring Security checks revocation on protected requests.
-5. Subsequent requests with that token are rejected.
-
-«Saving a token ID in MySQL alone does not invalidate a JWT. The JWT validation process must check the revocation table.»
-
----
-
-6. Forgot Password API
-
-Endpoint
-
-"POST /api/v1/auth/forgot-password"
-
-Description
-
-Requests a password-reset token for a registered email address.
-
-The initial learning version generates a token and returns it in the response. Later, the token should be delivered through email.
-
-Request Payload
-
-{
-  "email": "javed@example.com"
-}
-
-Development Response
-
-{
-  "message": "Reset token generated for development",
-  "resetToken": "<temporary-reset-token>"
-}
-
-The current planned implementation stores tokens in memory and sets a 10-minute expiry.
-
-Production Response Recommendation
-
-{
-  "message": "If the account exists, password reset instructions will be sent."
-}
-
-Possible Errors
-
-- "400 Bad Request" — missing or invalid email.
-
-In production, avoid revealing whether the email address is registered.
-
-Security
-
-- Generate a cryptographically secure reset token.
-- Expire the token after a short period.
-- Make the token single-use.
-- Never return the reset token in production responses.
-- Add rate limiting to prevent abuse.
-
----
-
-7. Reset Password API
-
-Endpoint
-
-"POST /api/v1/auth/reset-password"
-
-Description
-
-Changes the password after validating the reset token.
-
-Request Payload
-
-{
-  "email": "javed@example.com",
-  "resetToken": "<temporary-reset-token>",
-  "newPassword": "NewStrongPassword123"
-}
-
-Successful Response — "200 OK"
-
-{
-  "message": "Password reset successful"
-}
-
-Possible Errors
-
-- "400 Bad Request" — invalid, expired, or already-used reset token.
-- "400 Bad Request" — invalid password fields.
-
-Security
-
-- Verify the reset token before changing the password.
-- Ensure the token belongs to the same account.
-- Hash the new password with BCrypt.
-- Delete or invalidate the reset token after successful use.
-- Revoke existing sessions or tokens after a password reset.
-
-«The reset token must be verified even though the endpoint is public. Public access means no login is required; it does not mean anyone can change any user's password.»
-
----
-
-8. Admin Login
-
-Endpoint
-
-"POST /api/v1/auth/login"
-
-Description
-
-Admins and normal users use the same login API. The backend identifies the role from the user's database record.
-
-Admin Login Request
-
-{
-  "email": "admin@example.com",
-  "password": "AdminStrongPassword123"
-}
-
-Example JWT Claims
-
-{
-  "sub": "admin@example.com",
-  "jti": "<unique-token-id>",
-  "role": "ROLE_ADMIN"
-}
-
-A normal user's role would be "ROLE_USER".
-
-These are illustrative decoded claims, not a complete signed JWT.
-
-Security
-
-- Create the initial admin through a trusted setup process.
-- Never allow public registration to assign "ROLE_ADMIN".
-- Validate the token signature and expiration.
-- Configure Spring Security to map the role claim to authorities.
-
----
-
-9. Admin — List Users API
-
-Status: Planned
-
-Endpoint
-
-"GET /api/v1/admin/users"
-
-Description
-
-Allows an authenticated admin to view user accounts.
-
-Request Headers
-
-Authorization: Bearer <admin-access-token>
-
-Request Body
-
-No body required.
-
-Example Response — "200 OK"
-
-[
-  {
-    "id": 1,
-    "name": "Mohd Javed",
-    "email": "javed@example.com",
-    "role": "ROLE_USER",
-    "enabled": true
-  },
-  {
-    "id": 2,
-    "name": "Test User",
-    "email": "test@example.com",
-    "role": "ROLE_USER",
-    "enabled": false
-  }
-]
-
-Possible Errors
-
-- "401 Unauthorized" — missing or invalid JWT.
-- "403 Forbidden" — authenticated user is not an admin.
-
-Security
-
-Never expose password hashes, reset tokens, or other sensitive information in the user list.
-
----
-
-10. Admin — Enable or Disable User API
-
-Status: Planned
-
-Endpoint
-
-"PATCH /api/v1/admin/users/{id}/status"
+Update `src/main/resources/application.properties` with your local database and SMTP configuration.
 
 Example:
 
-"PATCH /api/v1/admin/users/2/status"
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/secure_auth_db
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
 
-Description
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
 
-Allows an administrator to enable or disable a user account.
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=${MAIL_USERNAME}
+spring.mail.password=${MAIL_APP_PASSWORD}
 
-Request Headers
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.connectiontimeout=5000
+spring.mail.properties.mail.smtp.timeout=5000
+spring.mail.properties.mail.smtp.writetimeout=5000
+```
 
-Authorization: Bearer <admin-access-token>
-Content-Type: application/json
+Configure the JWT secret using the property name expected by your existing JWT configuration.
 
-Request Payload — Disable User
+**Important:** Never commit database passwords, Gmail App Passwords, JWT secrets, or other credentials to GitHub. Use environment variables or a secret manager.
 
-{
-  "enabled": false
-}
+## 🚀 Run the Application
 
-Successful Response — "200 OK"
+Open a terminal in the project root directory.
 
-{
-  "id": 2,
-  "enabled": false,
-  "message": "User disabled successfully"
-}
+### Build the project
 
-Request Payload — Enable User
+```bash
+mvn clean package
+```
 
-{
-  "enabled": true
-}
+### Start the application
 
-Successful Response — "200 OK"
+```bash
+mvn spring-boot:run
+```
 
-{
-  "id": 2,
-  "enabled": true,
-  "message": "User enabled successfully"
-}
+Default local base URL:
 
-Possible Errors
+```text
+http://localhost:8080
+```
 
-- "400 Bad Request" — invalid status or prohibited account operation.
-- "401 Unauthorized" — missing or invalid JWT.
-- "403 Forbidden" — caller is not an admin.
-- "404 Not Found" — user ID does not exist.
+Check your application configuration if a different port is configured.
 
-Expected Behaviour
+## 🔗 API Endpoints
 
-When an account is disabled:
+The following table describes the intended API structure. Confirm the exact mappings in your controllers.
 
-1. The user cannot log in.
-2. Existing JWTs for that user must no longer grant access to protected APIs.
-3. The user should receive "401 Unauthorized" when attempting protected access.
+| Method | Endpoint | Description | Access |
+|---|---|---|---|
+| POST | `/api/v1/auth/register` | Register a normal user | Public |
+| POST | `/api/v1/auth/login` | Authenticate a user | Public |
+| POST | `/api/v1/auth/logout` | Logout and revoke token | Authenticated |
+| POST | `/api/v1/auth/forgot-password` | Request password-reset instructions | Public |
+| POST | `/api/v1/auth/reset-password` | Reset password using token | Public + valid reset token |
+| POST | `/api/v1/auth/admin-registration` | Register an invited admin | Public + valid invitation token |
+| GET | `/api/v1/super-admin/dashboard` | Access Super Admin dashboard | Super Admin |
+| POST | `/api/v1/super-admin/admin-invitations` | Create an admin invitation | Super Admin |
+| POST | `/api/v1/super-admin/admins` | Directly create an admin, if implemented | Super Admin |
 
-Checking "enabled" only during login is insufficient. Existing JWTs must also be checked against current account status, or invalidated through another reliable mechanism.
+Public routes should still validate their required reset or invitation tokens. Public registration must not allow users to assign themselves administrative roles.
 
----
+## 🧪 Testing with Postman
 
-11. Common HTTP Status Codes
+### Authentication APIs
 
-Status| Meaning
-"200 OK"| Request successful
-"201 Created"| Resource created
-"400 Bad Request"| Invalid request data
-"401 Unauthorized"| Authentication failed or token invalid
-"403 Forbidden"| Authenticated user lacks permission
-"404 Not Found"| Resource not found
-"409 Conflict"| Resource conflicts with existing data
-"500 Internal Server Error"| Unexpected server error
+1. Start the Spring Boot application.
+2. Open Postman.
+3. Create a request using the appropriate HTTP method.
+4. Set the request body to **Body → raw → JSON**.
+5. Use **No Auth** for public endpoints.
+6. Use a valid Bearer JWT for protected endpoints.
 
----
+### Admin Invitation Flow
 
-12. Implementation Checklist
+1. Authenticate as a Super Admin.
+2. Call the admin invitation API with the invited user's email.
+3. Receive the invitation email.
+4. Import the supplied cURL command using **Postman → Import → Raw text**.
+5. Verify the registration request and submit it.
+6. Confirm that the admin account is created with `ROLE_ADMIN`.
 
-- [ ] Registration with BCrypt password hashing
-- [ ] Login and JWT generation
-- [ ] JWT validation using Spring Security
-- [ ] Logout and revoked-token validation
-- [ ] Forgot-password token generation
-- [ ] Reset-password token validation and single-use enforcement
-- [ ] Email delivery for password-reset instructions
-- [ ] Admin account setup
-- [ ] Role-based authorization
-- [ ] Admin user listing
-- [ ] Admin enable/disable user
-- [ ] Reject disabled users on protected requests
-- [ ] Revoke existing tokens after password reset
-- [ ] Standardize error responses
-- [ ] Rate-limit authentication endpoints
-- [ ] Use HTTPS in deployed environments
+### Forgot Password Flow
 
----
+1. Call the forgot-password API with the account email.
+2. Check the email for the password-reset request.
+3. Import the supplied cURL command into Postman.
+4. Set the desired new password.
+5. Submit the reset request.
+6. Log in using the updated password.
 
-13. Important Notes
+Never share real reset tokens, invitation tokens, or passwords in screenshots or public repositories.
 
-This document describes the current learning project and proposed future endpoints. The admin APIs are not implemented merely because they are documented. Request/response examples should be synchronized with the actual Java DTOs and controller methods.
+## 🔐 Role-Based Access Control
 
-Before production deployment, add email verification, secure reset-token persistence, rate limiting, consistent error handling, audit logging for admin actions, and appropriate token/session invalidation.
+| Role | Access |
+|---|---|
+| `ROLE_USER` | Normal user APIs |
+| `ROLE_ADMIN` | Admin APIs and permitted user-level functionality |
+| `ROLE_SUPER_ADMIN` | Super Admin APIs and permitted administrative functionality |
+
+The exact access rules depend on the matchers and method-level security configured in Spring Security.
+
+## 🛠️ Troubleshooting
+
+### 401 Unauthorized
+- Check the endpoint URL and HTTP method.
+- Select No Auth for public endpoints.
+- Verify that the endpoint is included in `permitAll()`.
+- Check custom JWT filters and token validation.
+
+### 403 Forbidden
+- Verify the authenticated user's role.
+- Check JWT role claim mapping.
+- Review `hasRole()` and `hasAuthority()` configuration.
+
+### Email not received
+- Verify Gmail SMTP settings.
+- Use a Gmail App Password rather than the normal account password.
+- Check application logs and the spam folder.
+
+### Database connection failure
+- Confirm MySQL is running.
+- Verify database name and credentials.
+- Check the MySQL driver dependency.
+
+## 🔒 Security Best Practices
+
+- Store passwords using BCrypt.
+- Keep JWT signing secrets and credentials outside source control.
+- Use HTTPS outside local development.
+- Use random, expiring, single-use reset and invitation tokens.
+- Store token hashes where appropriate.
+- Never put passwords in URLs.
+- Avoid exposing raw tokens in application logs.
+- Use generic forgot-password responses to avoid revealing whether an account exists.
+- Add rate limiting to login and password-recovery endpoints.
+- Use concurrency-safe token consumption for production.
+- Require password setup or change for newly provisioned admin accounts.
+
+## 🗺️ Future Improvements
+
+- Automated unit and integration tests
+- Global exception handling
+- API documentation using OpenAPI/Swagger
+- Rate limiting and account lockout
+- Email verification
+- Password-change notification emails
+- Production deployment with HTTPS and managed secrets
+- CI/CD integration
+
+## 👨‍💻 Author
+
+**Mohd Javed**
+
+Java | Spring Boot | REST APIs | Spring Security | MySQL
+
+## 📄 License
+
+No license has been specified yet. Add a suitable `LICENSE` file before distributing the project publicly.
