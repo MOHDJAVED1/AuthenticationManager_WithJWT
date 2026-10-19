@@ -20,6 +20,7 @@ import com.spring.authentication.entity.ResetPasswordRequest;
 import com.spring.authentication.service.AdminInvitationService;
 import com.spring.authentication.service.AuthService;
 
+import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -69,7 +70,7 @@ public class AuthController {
 	}
 
 	@PostMapping("/forgot-password")
-	public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) {
+	public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) throws MessagingException {
 		
 		String email = request.get("email");
 		if (email == null || email.isBlank()) {

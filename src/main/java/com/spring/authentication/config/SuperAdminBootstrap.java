@@ -39,6 +39,7 @@ public class SuperAdminBootstrap {
 			user.setEmail(normalizedEmail);
 			user.setPasswordHash(passwordEncoder.encode(password));
 			user.setRole(Role.ROLE_SUPER_ADMIN);
+			user.setAccountType("PRIMARY_SUPER_ADMIN");
 			user.setEnabled(true);
 			userRepository.save(user);
 		};

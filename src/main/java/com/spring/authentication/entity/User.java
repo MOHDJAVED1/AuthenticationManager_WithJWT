@@ -51,4 +51,7 @@ public class User {
 		createdAt = LocalDateTime.now();
 	}
 	
+	@Column(name = "account_type", length = 30)
+	private String accountType;
+	
 }

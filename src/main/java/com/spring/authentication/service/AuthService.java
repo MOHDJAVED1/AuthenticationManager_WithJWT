@@ -19,6 +19,7 @@ import com.spring.authentication.entity.Role;
 import com.spring.authentication.entity.User;
 import com.spring.authentication.repository.UserRepository;
 
+import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
@@ -47,6 +48,7 @@ public class AuthService {
 		user.setName(request.getName().trim());
 		user.setEmail(email);
 		user.setRole(Role.ROLE_USER);
+		user.setAccountType("USER");
 		user.setEnabled(true);
 		user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
 
@@ -85,7 +87,7 @@ public class AuthService {
 		jwtService.revokedToken(token);
 	}
 
-	public String requestReset(String email) {
+	public String requestReset(String email) throws MessagingException {
 
 		String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
 

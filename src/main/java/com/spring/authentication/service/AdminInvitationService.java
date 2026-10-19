@@ -1,29 +1,47 @@
 package com.spring.authentication.service;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
+import javax.management.RuntimeErrorException;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.spring.authentication.entity.AdminInvitation;
 import com.spring.authentication.entity.Role;
 import com.spring.authentication.entity.User;
+import com.spring.authentication.entity.UserResponseDTO;
 import com.spring.authentication.repository.AdminInvitationRepository;
 import com.spring.authentication.repository.UserRepository;
 
+import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class AdminInvitationService {
+	
+	@Value("${orgnization.name}")
+    private String organizationName;
+	
+	@Value("${orgnization.email}")
+	private String orgnizationEmail;
+	
+	@Value("${orgnization.phoneNumber}")
+	private String ornizationPhoneNumber;
 
 	private final PasswordEncoder passwordEncoder;
 	private final AdminInvitationRepository adminInvitationRepository;
@@ -33,7 +51,7 @@ public class AdminInvitationService {
 	private final SecureRandom secureRandom = new SecureRandom();
 	
 	@Transactional
-	public String createAdminInvitation(String email, String createdByEmail) {
+	public String createAdminInvitation(String email, String createdByEmail) throws MessagingException {
 		
 		String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
 		
@@ -106,6 +124,7 @@ public class AdminInvitationService {
 		user.setEmail(normalizedEmail);
 		user.setPasswordHash(passwordEncoder.encode(password));
 		user.setRole(Role.ROLE_ADMIN);
+		user.setAccountType("ADMIN");
 		user.setEnabled(true);
 		
 		userRepository.save(user);
@@ -129,9 +148,112 @@ public class AdminInvitationService {
 		user.setEmail(normalizedEmail);
 		user.setPasswordHash(passwordEncoder.encode(password));
 		user.setRole(Role.ROLE_ADMIN);
+		user.setAccountType("ADMIN");
 		user.setEnabled(true);
 		
 		userRepository.save(user);
 		
+	}
+
+	public List<UserResponseDTO> fetchAllUsers() {
+		return userRepository.findAll()
+				.stream()
+				.map(this::mapToResponse)
+				.toList();
+		
+	}
+	
+	// Hide user password we can't reveal it due to security reason
+	private UserResponseDTO mapToResponse(User user) {
+		return new UserResponseDTO(
+				user.getId(),
+				user.getName(),
+				user.getEmail(),
+				user.getRole().name(),
+				user.isEnabled());
+	}
+
+	@Transactional
+	public UserResponseDTO enableOrDisabledUsers(String email, String authenticatedEmail) throws MessagingException {
+		String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+		
+		User user = userRepository.findByEmail(normalizedEmail).orElseThrow(() ->
+			new RuntimeException("User not found"));
+		
+		User authenticateUser = userRepository.findByEmail(authenticatedEmail).orElseThrow(() -> new RuntimeException("User not found"));
+		
+		if (user.getEmail().equalsIgnoreCase(authenticatedEmail)) {
+	        throw new RuntimeException("You cannot change your own account status");
+	    }
+		
+		if (authenticateUser.getRole() != Role.ROLE_SUPER_ADMIN) {
+	        throw new RuntimeException("Unauthorized: Only super admins can change user status");
+	    }
+		
+		boolean isPrimary = "PRIMARY_SUPER_ADMIN".equals(authenticateUser.getAccountType());
+	    boolean isBackup = "BACKUP_SUPER_ADMIN".equals(authenticateUser.getAccountType());
+		
+	    if (isBackup) {
+	        // Backup Super Admin CANNOT modify any Super Admin accounts
+	        if (user.getRole() == Role.ROLE_SUPER_ADMIN) {
+	            throw new RuntimeException("Backup super admins cannot enable or disable super admin accounts");
+	        }
+	    } else if (!isPrimary) {
+	        // Fallback if accountType is something else entirely
+	        throw new RuntimeException("Unauthorized account type");
+	    }
+		
+		user.setEnabled(!user.isEnabled());
+
+		User updatedUser = userRepository.save(user);
+		
+		String subject = !user.isEnabled() ? "Your Account Has Been Disabled" : "Your Account Has Been Re-enabled";
+
+		String emailBody = !user.isEnabled() ? 
+			    "<html><body>"
+			    + "Hello "
+			    + user.getName()
+			    + "<br><br>"
+			    + "Your account with "
+			    + organizationName
+			    + " has been disabled by the organization. You will not be able to access protected services while your account remains disabled"
+			    + "<br><br>"
+			    + "If you believe this action was taken in error or require assistance, please contact the organization using the details below."
+			    + "<br><br>"
+			    + "<h6>Organization Contact Details</h6>"
+			    + "<ul>"
+			    + "<li>Email: " + orgnizationEmail + " </li>"
+			    + "<li>Phone Number: " + ornizationPhoneNumber + "</li>"
+			    + "</ul>"
+			    + "<br>"
+			    + "Regards,<br>"
+			    + organizationName + " Support Team"
+			    + "</body></html>"
+			    
+			    : 
+			    
+			    "<html><body>"
+			    + "Hello "
+			    + user.getName()
+			    + "<br><br>"
+			    + "Good news! Your account with "
+			    + organizationName
+			    + " has been enabled by the organization. You can now log in and access the service permitted by your account role"
+			    + "<br><br>"
+			    + "If you need assistance, please contact us using the details below."
+			    + "<br><br>"
+			    + "<h6>Organization Contact Details</h6>"
+			    + "<ul>"
+			    + "<li>Email: " + orgnizationEmail + " </li>"
+			    + "<li>Phone Number: " + ornizationPhoneNumber + "</li>"
+			    + "</ul>"
+			    + "<br>"
+			    + "Regards,<br>"
+			    + organizationName + " Support Team"
+			    + "</body></html>";
+		
+		emailService.sendEmail(normalizedEmail, subject, emailBody);
+		
+		return mapToResponse(updatedUser);
 	}
 }
