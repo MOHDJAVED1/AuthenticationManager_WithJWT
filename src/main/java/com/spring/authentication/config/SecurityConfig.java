@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.spring.authentication.service.JwtService;
@@ -21,9 +22,11 @@ import io.jsonwebtoken.lang.Collections;
 public class SecurityConfig {
 
 	private final JwtService jwtService;
+	private final RateLimitFilter rateLimitFilter;
 
-	SecurityConfig(JwtService jwtService) {
+	SecurityConfig(JwtService jwtService, RateLimitFilter rateLimitFilter) {
 		this.jwtService = jwtService;
+		this.rateLimitFilter = rateLimitFilter;
 	}
 
 	@Bean
@@ -56,6 +59,7 @@ public class SecurityConfig {
 				.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtService.jwtDecoder())
 				.jwtAuthenticationConverter(jwtauthenticationConverter())
 						))
+				.addFilterBefore(rateLimitFilter, BearerTokenAuthenticationFilter.class)
 				.build();
 	}
 

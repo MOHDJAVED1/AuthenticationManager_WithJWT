@@ -4,6 +4,8 @@ import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,6 +18,7 @@ import com.spring.authentication.repository.UserRepository;
 public class SuperAdminBootstrap {
 	
 	@Bean
+	@ConditionalOnProperty(name = "app.bootstrap-super-admin-enabled", havingValue = "true")
 	CommandLineRunner createSuperAdmin(UserRepository userRepository,
 			PasswordEncoder passwordEncoder,
 			@Value("${app.bootstrap.super-admin.email:}")

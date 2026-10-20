@@ -1,10 +1,12 @@
 package com.spring.authentication.service;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,12 @@ public class AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
 	private final EmailService emailService;
+	
+	@Value("${security.login.max-failed-attempts}")
+	private int maxFailedAttempts;
+	
+	@Value("${security.login.lock-duration-minutes}")
+	private long lockDurationMinutes;
 
 	private final ConcurrentHashMap<String, ResetEntry> resetToken = new ConcurrentHashMap<>();
 
@@ -65,13 +73,23 @@ public class AuthService {
 		User user = userRepository.findByEmail(email)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
 
-		if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+		if(isAccountLocked(user)) {
+			throw new ResponseStatusException(HttpStatus.LOCKED, 
+					"Account is temporarily locked. Please try again later");
 		}
-
+		
 		if (!user.isEnabled()) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Account is disabled");
 		}
+		
+		if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+			recordFailedLogin(user);
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+		}
+		
+		user.setFailedLoginAttempts(0);
+		user.setLockTime(null);
+		userRepository.save(user);
 		
 		String token = jwtService.generateToken(user.getEmail(), user.getRole());
 
@@ -145,6 +163,51 @@ public class AuthService {
 
 		// One time use only
 		resetToken.remove(request.getResetToken());
+	}
+	
+	// Is accout locked
+	private boolean isAccountLocked(User user) {
+		
+		LocalDateTime lockTime = user.getLockTime();
+		
+		if(lockTime == null) {
+			return false;
+		}
+		
+		LocalDateTime unloackTime = lockTime.plusMinutes(lockDurationMinutes);
+		
+		if(LocalDateTime.now().isBefore(unloackTime)) {
+			return true;
+		}
+		
+		user.setFailedLoginAttempts(0);
+		user.setLockTime(null);
+		userRepository.save(user);
+				
+		return false;
+	}
+	
+	// Record incorrect attemps
+	
+	private void recordFailedLogin(User user) {
+		
+		Integer attempts = user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts();
+	
+		attempts++;
+		
+		user.setFailedLoginAttempts(attempts);
+		
+		if(attempts >= maxFailedAttempts) {
+			
+			user.setLockTime(LocalDateTime.now());
+			
+			userRepository.save(user);
+			
+			throw new ResponseStatusException(HttpStatus.LOCKED, 
+					"Account locked due to too many failed login attemps");
+		}
+		
+		userRepository.save(user);
 	}
 
 	private record ResetEntry(String email, Instant expiresAt) {

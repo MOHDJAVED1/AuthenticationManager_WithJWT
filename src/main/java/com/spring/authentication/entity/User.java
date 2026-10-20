@@ -54,4 +54,10 @@ public class User {
 	@Column(name = "account_type", length = 30)
 	private String accountType;
 	
+	@Column(name = "failed_login_attempts", nullable = false)
+	private Integer failedLoginAttempts = 0;
+	
+	@Column(name = "lock_time")
+	private LocalDateTime lockTime;
+	
 }
