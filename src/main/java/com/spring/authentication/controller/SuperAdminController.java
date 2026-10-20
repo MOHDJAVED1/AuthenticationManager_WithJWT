@@ -89,7 +89,7 @@ public class SuperAdminController {
 	
 	@PostMapping("/send-email")
 	public ResponseEntity<?> sendTestEmail(@RequestParam String to) throws MessagingException{
-		emailService.sendEmail(to, "SMTP Test - Secure Auth API",  "Congratualtions! Your Spring Boot Gmail SMTP" + "configuration is working");
+//		emailService.sendEmail(to, "SMTP Test - Secure Auth API",  "Congratualtions! Your Spring Boot Gmail SMTP" + "configuration is working");
 		return ResponseEntity.ok(Map.of("message", "Test email sent successfully"));
 	}
 	

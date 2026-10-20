@@ -1,7 +1,6 @@
 package com.spring.authentication.service;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AccessDeniedException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -10,12 +9,8 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
-
-import javax.management.RuntimeErrorException;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -79,12 +74,12 @@ public class AdminInvitationService {
 		        + "\"password\":\"ChangeMe@123\","
 		        + "\"token\":\"" + rawToken + "\"}'";
 
-		emailService.sendEmail(
-		        email,
-		        "Admin Registration Invitation",
-		        "Copy the command below into Postman using Import -> Raw text:\n\n"
-		                + curlCommand
-		);
+//		emailService.sendEmail(
+//		        email,
+//		        "Admin Registration Invitation",
+//		        "Copy the command below into Postman using Import -> Raw text:\n\n"
+//		                + curlCommand
+//		);
 		
 		return rawToken;
 	}
@@ -252,7 +247,7 @@ public class AdminInvitationService {
 			    + organizationName + " Support Team"
 			    + "</body></html>";
 		
-		emailService.sendEmail(normalizedEmail, subject, emailBody);
+//		emailService.sendEmail(normalizedEmail, subject, emailBody);
 		
 		return mapToResponse(updatedUser);
 	}

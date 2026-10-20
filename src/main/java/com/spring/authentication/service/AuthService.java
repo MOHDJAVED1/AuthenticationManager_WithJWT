@@ -3,7 +3,9 @@ package com.spring.authentication.service;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.spring.authentication.entity.EmailCode;
 import com.spring.authentication.entity.LoginRequest;
 import com.spring.authentication.entity.LoginResponse;
 import com.spring.authentication.entity.RegisterResponse;
@@ -19,6 +22,7 @@ import com.spring.authentication.entity.RegisterUser;
 import com.spring.authentication.entity.ResetPasswordRequest;
 import com.spring.authentication.entity.Role;
 import com.spring.authentication.entity.User;
+import com.spring.authentication.repository.EmailTemplateRepository;
 import com.spring.authentication.repository.UserRepository;
 
 import jakarta.mail.MessagingException;
@@ -30,9 +34,16 @@ import lombok.RequiredArgsConstructor;
 public class AuthService {
 
 	private final UserRepository userRepository;
+	private final EmailTemplateRepository emailTemplateRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
 	private final EmailService emailService;
+	
+	@Value("${orgnization.name}")
+	private String orgnisationName;
+	
+	@Value("${orgnization.address}")
+	private String orgnisationAddress;
 	
 	@Value("${security.login.max-failed-attempts}")
 	private int maxFailedAttempts;
@@ -61,6 +72,14 @@ public class AuthService {
 		user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
 
 		User savedUser = userRepository.save(user);
+		
+		Map<String, Object> emailInput = new HashMap<>();
+		emailInput.put("company_name", orgnisationName);
+		emailInput.put("username", email);
+		emailInput.put("current_year", LocalDateTime.now().getYear());
+		emailInput.put("company_address", orgnisationAddress);
+		
+		emailService.sendEmail(EmailCode.USER_CREATED.toString(), email, emailInput);
 
 		return new RegisterResponse(savedUser.getId(), savedUser.getName(), savedUser.getEmail(),
 				"User registered successfully");
@@ -127,19 +146,19 @@ public class AuthService {
 		        + "\"resetToken\":\"" + token + "\","
 		        + "\"newPassword\":\"ChangeMe123!\"}'";
 
-		emailService.sendEmail(
-		        email,
-		        "Reset Your Password - Secure Auth API",
-		        "Hello,\n\n"
-		        + "A password reset was requested for your account.\n\n"
-		        + "Import the following cURL command into Postman "
-		        + "using Import -> Raw text:\n\n"
-		        + curlCommand
-		        + "\n\nChange newPassword to your desired password "
-		        + "before sending the request.\n"
-		        + "This reset token expires according to your "
-		        + "existing reset-token expiry policy."
-		);
+//		emailService.sendEmail(
+//		        email,
+//		        "Reset Your Password - Secure Auth API",
+//		        "Hello,\n\n"
+//		        + "A password reset was requested for your account.\n\n"
+//		        + "Import the following cURL command into Postman "
+//		        + "using Import -> Raw text:\n\n"
+//		        + curlCommand
+//		        + "\n\nChange newPassword to your desired password "
+//		        + "before sending the request.\n"
+//		        + "This reset token expires according to your "
+//		        + "existing reset-token expiry policy."
+//		);
 
 		return token;
 	}
@@ -209,8 +228,7 @@ public class AuthService {
 		
 		userRepository.save(user);
 	}
+	
+	private record ResetEntry(String email, Instant expiresAt) {}
 
-	private record ResetEntry(String email, Instant expiresAt) {
-
-	}
 }
