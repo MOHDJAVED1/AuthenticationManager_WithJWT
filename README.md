@@ -1,288 +1,470 @@
+# 🛡️ Secure Auth API
 
-# 🔐 Secure Auth API
+> A **Spring Boot REST API** demonstrating secure authentication, JWT-based authorization, role management, account protection, and API rate limiting.
 
-A Spring Boot REST API for secure authentication, JWT-based authorization, password recovery, and role-based admin management.
+---
 
-## 📌 Overview
+## 📑 Table of Contents
 
-**Secure Auth API** is a backend application built using Java and Spring Boot. It demonstrates secure user authentication, password encryption, JWT validation, role-based access control, email notifications, and invitation-based admin registration.
+| # | Section |
+|---|---------|
+| 1 | [Overview](#-overview) |
+| 2 | [Technology Stack](#-technology-stack) |
+| 3 | [Features](#-features) |
+| 4 | [User Roles and Permissions](#-user-roles-and-permissions) |
+| 5 | [API Endpoints](#-api-endpoints) |
+| 6 | [Authentication Flow](#-authentication-flow) |
+| 7 | [Security Implementation](#-security-implementation) |
+| 8 | [Configuration](#-configuration) |
+| 9 | [Database](#-database) |
+| 10 | [Run the Application](#️-run-the-application) |
+| 11 | [Testing with Postman](#-testing-with-postman) |
+| 12 | [Production Deployment Checklist](#-production-deployment-checklist) |
+| 13 | [Known Limitations and Future Improvements](#️-known-limitations-and-future-improvements) |
+| 14 | [Security Disclaimer](#️-security-disclaimer) |
 
-The project is designed as a learning project to understand how authentication and authorization work in a real-world backend application.
+---
 
-## ✨ Features
+## 🎯 Overview
 
-### 🔑 Authentication & Authorization
-- User registration and login
-- JWT-based authentication
-- Role-based access control (RBAC)
-- Support for `ROLE_USER`, `ROLE_ADMIN`, and `ROLE_SUPER_ADMIN`
-- Secure password hashing using BCrypt
-- Logout with revoked-token validation
+**Secure Auth API** is a backend authentication and authorization project built with **Spring Boot** and **Spring Security**.
 
-### 📧 Email Integration
-- Gmail SMTP integration using Spring Boot Mail
-- Email service reusable across application modules
-- Email-based admin invitations
-- Password-reset email notifications
+It provides REST APIs for:
 
-### 🔄 Password Management
-- Forgot password API
-- Reset password using a secure token
-- Token expiry validation
-- Password updates using BCrypt hashing
+- ✅ User registration
+- ✅ Login / JWT authentication
+- ✅ Logout
+- ✅ Password recovery
+- ✅ Administrative operations
+- ✅ Protection against excessive API requests
 
-### 👑 Admin Management
-- Invitation-based admin registration
-- Time-limited invitation tokens
-- Single-use invitation validation
-- Super Admin protected endpoints
-- Optional direct admin creation by Super Admin
+> 💡 The project is intended as a practical implementation of common backend security patterns and can be extended for enterprise applications.
 
-### 🛡️ Security
-- Spring Security integration
-- JWT role claim validation
-- Protected endpoints based on user roles
-- Public authentication endpoints with token-based business validation
-- Request validation using Jakarta Validation
-
-> Note: Keep only features that are implemented and tested in your current branch.
+---
 
 ## 🧰 Technology Stack
 
 | Technology | Purpose |
-|---|---|
-| Java 17 | Programming language |
-| Spring Boot | Backend framework |
-| Spring Security | Authentication and authorization |
-| Spring Web | REST API development |
-| Spring Data JPA | Database access |
-| Hibernate | ORM |
-| MySQL | Relational database |
-| JWT | Token-based authentication |
-| BCrypt | Password hashing |
-| Spring Boot Mail | Email notifications |
-| Maven | Build and dependency management |
-| Postman | API testing |
-| Lombok | Boilerplate reduction, where used |
+|------------|---------|
+| ☕ **Java 17-compatible** | Language runtime |
+| 🌱 **Spring Boot 3.x** | Application framework |
+| 🔐 **Spring Security** | Authentication & authorization |
+| 🎫 **Spring Security OAuth2 Resource Server** | JWT validation |
+| 🔑 **JWT (JSON Web Token)** | Token-based auth |
+| 📦 **Maven** | Build tool |
+| 🗄️ **Spring Data JPA / Hibernate** | ORM |
+| 🐬 **MySQL 8** | Database |
+| 🧩 **Lombok** | Boilerplate reduction |
+| 🚦 **Bucket4j** | Rate limiting |
+| 🧪 **Postman** | API testing |
+| 📧 **Spring Mail** | Email functionality |
 
-## 🏗️ Application Architecture
+> ⚠️ **Note:** Verify the exact dependency versions in `pom.xml` before publishing the project.
 
-```text
-                  Client / Postman
-                         |
-                         v
-                Spring Security
-                         |
-                         v
-                    Controller
-                         |
-                         v
-                     Service
-                    /       \
-                   v         v
-             Repository   EmailService
-                  |            |
-                  v            v
-                MySQL      Gmail SMTP
+---
+
+## ✨ Features
+
+### 1️⃣ User Registration
+
+- REST API for user registration
+- Password hashing using Spring Security's `PasswordEncoder`
+- Persistence of user information in MySQL
+- Validation and duplicate-email checks
+
+### 2️⃣ Login and JWT Authentication
+
+- Login using registered credentials
+- Password verification using `PasswordEncoder.matches()`
+- JWT generation after successful authentication
+- JWT claims for user identity and role
+- Bearer-token authentication for protected APIs
+- **Stateless** Spring Security configuration
+
+### 3️⃣ Role-Based Access Control
+
+The application supports the following roles:
+
+- 🟢 `ROLE_USER`
+- 🟠 `ROLE_ADMIN`
+- 🔴 `ROLE_SUPER_ADMIN`
+
+Also uses user-type values for super-admin variants:
+
+- `PRIMARY_SUPER_ADMIN`
+- `BACKUP_SUPER_ADMIN`
+
+> 🛡️ Protected administrative operations **must** be restricted to the appropriate roles.
+
+### 4️⃣ Logout and Token Revocation
+
+- Logout API for invalidating a JWT before its natural expiration
+- Revoked-token tracking using a MySQL table
+- Token identifier (`jti`) used for revocation tracking
+- Authentication **rejects** revoked tokens
+- Revoked tokens no longer authorize access to protected resources
+
+### 5️⃣ Forgot Password and Reset Password
+
+- Forgot-password API
+- Reset-password API
+- Password updates using the configured password encoder
+- Support for password-reset tokens
+
+> 🔒 **Security Requirement:** Password-reset tokens must be **cryptographically unpredictable**, **short-lived**, **single-use**, and **securely stored**. Reset tokens must **never** be exposed in production API responses or application logs.
+
+### 6️⃣ Admin Registration and Invitations
+
+- Super-admin-controlled admin onboarding
+- Admin registration using an **invitation flow**
+- Invitation endpoint: `POST /api/v1/auth/admin-registration`
+- Expiring and single-use invitation tokens
+- Server-side enforcement of:
+  - Invitation validation
+  - Token expiration
+  - Token reuse prevention
+  - Role assignment
+
+### 7️⃣ Account Lockout
+
+Login flow includes configurable protection against repeated incorrect passwords.
+
+**Example configuration:**
+
+```properties
+security.login.max-failed-attempts=5
+security.login.lock-duration-minutes=240
 ```
 
-### Request Flow
+> 🔒 With these settings, an account is locked after **5 failed attempts** for **4 hours**.
 
-1. The client sends an HTTP request.
-2. Spring Security checks authentication and authorization rules.
-3. The controller receives and validates the request.
-4. The service executes business logic.
-5. The repository interacts with MySQL when required.
-6. EmailService sends email notifications when required.
-7. The API returns an appropriate HTTP response.
+The implementation tracks failed attempts and lock timestamps. Successful login resets the failure counter and clears expired locks according to the intended policy.
 
-## 📋 Prerequisites
+> ⚠️ **Warning:** The lockout implementation must be tested for **transaction rollback** and **concurrent login attempts** before production use.
 
-Before running the project, install:
+### 8️⃣ API Rate Limiting with Bucket4j
 
-- JDK 17 or the JDK version configured in the project
-- Maven
-- MySQL Server
-- Postman
-- Gmail account with 2-Step Verification and an App Password for SMTP
+Bucket4j is integrated into a custom request filter.
+
+**Example configuration:**
+
+```properties
+security.rate-limit.general.capacity=100
+security.rate-limit.general.refill-minutes=1
+security.rate-limit.login.capacity=10
+security.rate-limit.login.refill-minutes=1
+```
+
+- Login endpoint: `POST /api/v1/auth/login`
+- Login-specific limit and general limit selected by filter
+- When bucket is exhausted → **`429 Too Many Requests`**
+
+**⚠️ Current implementation considerations:**
+
+- 🧠 Rate-limit buckets are stored in **application memory**
+- 🖥️ Limits maintained separately by **client IP and endpoint**
+- 🔄 Bucket state is **lost on restart**
+- 🌐 Multiple instances **do not share** limits
+- ⏱️ Interval refill is **not necessarily a rolling one-minute window**
+- 🧹 Unused bucket entries need an **eviction strategy** to prevent memory growth
+
+### 9️⃣ Super-Admin Bootstrap Control
+
+The initial super-admin can be provisioned using a Spring `CommandLineRunner` bean.
+
+**Bootstrap is controlled through:**
+
+```properties
+app.bootstrap-super-admin.enabled=false
+```
+
+When `false`, a bean annotated with `@ConditionalOnProperty` is **not created**.
+
+**For authorized, one-time setup:**
+
+```bash
+java -jar secure-auth-api.jar \
+  --app.bootstrap-super-admin.enabled=true
+```
+
+> 🔒 After initial provisioning, start the application **without** the override. Production credentials must be supplied through a secure configuration mechanism. The bootstrap process must check whether the account already exists and must **not** create a public super-admin registration endpoint.
+
+---
+
+## 👥 User Roles and Permissions
+
+| Role | Intended Access |
+|------|-----------------|
+| 🟢 `ROLE_USER` | Normal user functionality |
+| 🟠 `ROLE_ADMIN` | Administrative functionality permitted by policy |
+| 🔴 `ROLE_SUPER_ADMIN` | Privileged administrative operations |
+| 🟣 `Primary / Backup Super-Admin` | Special super-admin classifications |
+
+> 🛡️ **Important:** The exact permissions should be enforced by Spring Security and **server-side** authorization checks, **not** by trusting a role sent by a client.
+
+---
+
+## 🌐 API Endpoints
+
+| Method | Endpoint | Purpose | Access |
+|--------|----------|---------|--------|
+| `POST` | `/api/v1/auth/register` | Register a user | 🌐 Public |
+| `POST` | `/api/v1/auth/login` | Authenticate and obtain a JWT | 🌐 Public |
+| `POST` | `/api/v1/auth/logout` | Revoke the current token | 🔐 Authenticated |
+| `POST` | `/api/v1/auth/forgot-password` | Initiate password recovery | 🌐 Public, rate-limited |
+| `POST` | `/api/v1/auth/reset-password` | Reset password using valid reset token | 🌐 Token-based |
+| `POST` | `/api/v1/auth/admin-registration` | Register an invited admin | 🎫 Invitation token required |
+
+> 📌 Other endpoints (user blocking, admin/super-admin dashboards) are subject to routes implemented in current controllers.
+
+### 📊 HTTP Status Codes
+
+| Status | Meaning |
+|--------|---------|
+| `200 OK` | Request completed successfully |
+| `201 Created` | Resource created successfully |
+| `400 Bad Request` | Invalid request or validation error |
+| `401 Unauthorized` | Missing or invalid authentication |
+| `403 Forbidden` | Authenticated user lacks permission |
+| `423 Locked` | Account is locked |
+| `429 Too Many Requests` | Rate limit exceeded |
+| `500 Internal Server Error` | Unexpected server error |
+
+---
+
+## 🔄 Authentication Flow
+
+```text
+1. User registers through the registration API
+   └─► Server hashes the password before saving it
+
+2. User logs in with their credentials
+   └─► Server verifies the password
+
+3. Server issues a signed JWT with configured claims
+   └─► Client sends token in subsequent requests:
+       Authorization: Bearer <access-token>
+
+4. Spring Security validates token and authorizes the request
+
+5. During logout, the token is revoked
+   └─► Subsequent requests using that token are rejected
+```
+
+---
+
+## 🔐 Security Implementation
+
+### 🗝️ Password Security
+
+- ✅ Store password **hashes**, never plaintext
+- ✅ Use adaptive encoders (BCrypt)
+- ❌ Never log passwords or include them in error responses
+
+### 🎫 JWT Security
+
+- ✅ Keep signing keys outside source control
+- ✅ Validate signature, expiration, and required claims
+- ✅ Reject revoked tokens
+- ✅ Keep token lifetimes short
+- ❌ Never trust client-provided role values
+
+### 🛡️ Authorization
+
+- ✅ Use Spring Security authorization rules
+- ✅ Enforce super-admin-only operations on the server
+- ✅ Prevent users from changing their own role
+- ✅ Protect admin invitations and user-blocking operations
+
+### 🚦 Abuse Prevention
+
+- ✅ Use Bucket4j to limit excessive requests
+- ✅ Apply stricter limits to login, registration, and password recovery
+- ✅ Keep account lockout separate from IP-based rate limiting
+- ✅ Return consistent error responses without exposing internal details
+
+### 🔑 Configuration and Secrets
+
+- ✅ Use environment variables or a secrets manager
+- ✅ Disable super-admin bootstrap by default
+- ✅ Disable unnecessary production debug logging
+- ✅ Use HTTPS in production
+
+---
 
 ## ⚙️ Configuration
 
-### 1. Create the database
+**Example development configuration:**
 
-Execute the following SQL statement in MySQL:
+```properties
+# ─── Database configuration ────────────────────────
+spring.datasource.url=${DB_URL}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+
+# ─── Login protection ──────────────────────────────
+security.login.max-failed-attempts=5
+security.login.lock-duration-minutes=240
+
+# ─── General rate limit ────────────────────────────
+security.rate-limit.general.capacity=100
+security.rate-limit.general.refill-minutes=1
+
+# ─── Login rate limit ──────────────────────────────
+security.rate-limit.login.capacity=10
+security.rate-limit.login.refill-minutes=1
+
+# ─── Super-admin bootstrap ─────────────────────────
+app.bootstrap-super-admin.enabled=false
+```
+
+> ⚠️ Configure the appropriate MySQL driver and JPA settings according to your project.
+> 🚫 **Do not commit production secrets or real credentials to Git.**
+
+---
+
+## 🗄️ Database
+
+The application uses **MySQL** and **Spring Data JPA**.
+
+**Tables may include:**
+
+- 👤 User/account table
+- 🎫 Revoked JWT token table
+- 📧 Invitation or password-reset token storage
+
+> 💡 **Recommendation:** Use database migrations for controlled schema changes in production. Do **not** rely solely on automatic schema updates.
+
+---
+
+## ▶️ Run the Application
+
+### 📋 Prerequisites
+
+- ☕ JDK compatible with the project
+- 📦 Maven
+- 🐬 MySQL
+- 🔧 Git
+
+### 🚀 Steps
+
+**1. Clone the repository**
+
+```bash
+git clone <your-repository-url>
+cd secure-auth-api
+```
+
+**2. Create the MySQL database**
 
 ```sql
 CREATE DATABASE secure_auth_db;
 ```
 
-### 2. Configure application.properties
+**3. Configure the required environment variables**
 
-Update `src/main/resources/application.properties` with your local database and SMTP configuration.
-
-Example:
-
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/secure_auth_db
-spring.datasource.username=${DB_USERNAME}
-spring.datasource.password=${DB_PASSWORD}
-
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=false
-
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=${MAIL_USERNAME}
-spring.mail.password=${MAIL_APP_PASSWORD}
-
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-spring.mail.properties.mail.smtp.connectiontimeout=5000
-spring.mail.properties.mail.smtp.timeout=5000
-spring.mail.properties.mail.smtp.writetimeout=5000
+```bash
+export DB_URL=jdbc:mysql://localhost:3306/secure_auth_db
+export DB_USERNAME=your_username
+export DB_PASSWORD=your_password
 ```
 
-Configure the JWT secret using the property name expected by your existing JWT configuration.
-
-**Important:** Never commit database passwords, Gmail App Passwords, JWT secrets, or other credentials to GitHub. Use environment variables or a secret manager.
-
-## 🚀 Run the Application
-
-Open a terminal in the project root directory.
-
-### Build the project
+**4. Build the project**
 
 ```bash
 mvn clean package
 ```
 
-### Start the application
+**5. Run the application**
 
 ```bash
-mvn spring-boot:run
+java -jar target/secure-auth-api-*.jar
 ```
 
-Default local base URL:
+**6. Test the APIs using Postman** 🧪
 
-```text
-http://localhost:8080
-```
+> ℹ️ Use the actual artifact name generated by Maven if it differs from the example.
 
-Check your application configuration if a different port is configured.
-
-## 🔗 API Endpoints
-
-The following table describes the intended API structure. Confirm the exact mappings in your controllers.
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| POST | `/api/v1/auth/register` | Register a normal user | Public |
-| POST | `/api/v1/auth/login` | Authenticate a user | Public |
-| POST | `/api/v1/auth/logout` | Logout and revoke token | Authenticated |
-| POST | `/api/v1/auth/forgot-password` | Request password-reset instructions | Public |
-| POST | `/api/v1/auth/reset-password` | Reset password using token | Public + valid reset token |
-| POST | `/api/v1/auth/admin-registration` | Register an invited admin | Public + valid invitation token |
-| GET | `/api/v1/super-admin/dashboard` | Access Super Admin dashboard | Super Admin |
-| POST | `/api/v1/super-admin/admin-invitations` | Create an admin invitation | Super Admin |
-| POST | `/api/v1/super-admin/admins` | Directly create an admin, if implemented | Super Admin |
-
-Public routes should still validate their required reset or invitation tokens. Public registration must not allow users to assign themselves administrative roles.
+---
 
 ## 🧪 Testing with Postman
 
-### Authentication APIs
+### Recommended Manual Test Scenarios
 
-1. Start the Spring Boot application.
-2. Open Postman.
-3. Create a request using the appropriate HTTP method.
-4. Set the request body to **Body → raw → JSON**.
-5. Use **No Auth** for public endpoints.
-6. Use a valid Bearer JWT for protected endpoints.
+| # | Test Scenario | Expected Result |
+|---|---------------|-----------------|
+| 1 | Register a new user | ✅ `201 Created` |
+| 2 | Log in with valid credentials | ✅ `200 OK` + JWT |
+| 3 | Repeated incorrect password | 🔒 Account locks after 5 attempts |
+| 4 | Verify account-lockout behavior | ✅ Lock respected |
+| 5 | Access protected endpoint with valid JWT | ✅ `200 OK` |
+| 6 | Attempt access without a JWT | ❌ `401 Unauthorized` |
+| 7 | Normal user accesses admin endpoint | ❌ `403 Forbidden` |
+| 8 | Logout and reuse revoked token | ❌ `401 Unauthorized` |
+| 9 | Test expired and invalid JWTs | ❌ `401 Unauthorized` |
+| 10 | Exceed login rate limit | 🚦 `429 Too Many Requests` |
+| 11 | Test invitation-token expiration & reuse | ❌ Rejected |
+| 12 | Test password-reset token expiration & reuse | ❌ Rejected |
+| 13 | Bootstrap runner disabled | ✅ No super-admin created |
 
-### Admin Invitation Flow
+> 🧪 Automated integration and security tests should be added for repeatable verification.
 
-1. Authenticate as a Super Admin.
-2. Call the admin invitation API with the invited user's email.
-3. Receive the invitation email.
-4. Import the supplied cURL command using **Postman → Import → Raw text**.
-5. Verify the registration request and submit it.
-6. Confirm that the admin account is created with `ROLE_ADMIN`.
+---
 
-### Forgot Password Flow
+## ✅ Production Deployment Checklist
 
-1. Call the forgot-password API with the account email.
-2. Check the email for the password-reset request.
-3. Import the supplied cURL command into Postman.
-4. Set the desired new password.
-5. Submit the reset request.
-6. Log in using the updated password.
+- [ ] 🔒 **HTTPS is enforced**
+- [ ] 🔑 **Production secrets stored securely**
+- [ ] 🎫 **JWT signing keys are strong and protected**
+- [ ] 🔐 **Adaptive password encoder in use**
+- [ ] ⏱️ **JWT expiration and revocation tested**
+- [ ] 🎟️ **Reset & invitation tokens short-lived and single-use**
+- [ ] 🚫 **Super-admin creation disabled during normal startup**
+- [ ] 🛡️ **Administrative authorization tested**
+- [ ] 🚦 **Appropriate rate limits on sensitive endpoints**
+- [ ] 🌐 **Rate-limit behavior suitable for multiple instances**
+- [ ] 🔄 **Account lockout handles concurrent requests**
+- [ ] 🧹 **Input validation & safe error handling**
+- [ ] 🗄️ **DB permissions follow least privilege**
+- [ ] 🕵️ **Dependencies scanned for vulnerabilities**
+- [ ] 📝 **Logs free of passwords, tokens, sensitive info**
+- [ ] 💾 **Backups, monitoring, and incident-response ready**
 
-Never share real reset tokens, invitation tokens, or passwords in screenshots or public repositories.
+---
 
-## 🔐 Role-Based Access Control
+## 🛠️ Known Limitations and Future Improvements
 
-| Role | Access |
-|---|---|
-| `ROLE_USER` | Normal user APIs |
-| `ROLE_ADMIN` | Admin APIs and permitted user-level functionality |
-| `ROLE_SUPER_ADMIN` | Super Admin APIs and permitted administrative functionality |
+> The following items should be verified or implemented as applicable:
 
-The exact access rules depend on the matchers and method-level security configured in Spring Security.
+| Area | Improvement |
+|------|-------------|
+| 🚦 **Rate Limiting** | Persistent or distributed rate limiting for multiple instances |
+| 🧹 **Buckets** | Eviction strategy and `Retry-After` support |
+| 🎯 **Dedicated Limits** | Specific limits for registration and password recovery |
+| 🔐 **Token Storage** | Secure persistent storage for reset & invitation tokens |
+| 🧪 **Testing** | Automated security and authorization integration tests |
+| 🗄️ **DB Migrations** | Database migrations and production schema management |
+| 📝 **Audit** | Audit logging for administrative actions |
+| 📊 **Monitoring** | Alerting for suspicious authentication activity |
+| 🕵️ **Security** | Dependency scanning and penetration testing |
+| 🌐 **Proxy** | Review forwarded client IP headers behind trusted proxy |
 
-## 🛠️ Troubleshooting
+---
 
-### 401 Unauthorized
-- Check the endpoint URL and HTTP method.
-- Select No Auth for public endpoints.
-- Verify that the endpoint is included in `permitAll()`.
-- Check custom JWT filters and token validation.
+## ⚠️ Security Disclaimer
 
-### 403 Forbidden
-- Verify the authenticated user's role.
-- Check JWT role claim mapping.
-- Review `hasRole()` and `hasAuthority()` configuration.
+> 🛡️ **This project demonstrates common authentication and authorization mechanisms.**
+>
+> Listing a security feature **does not establish** that it is implemented correctly or is immune to vulnerabilities.
+>
+> The application **should undergo** code review, automated testing, dependency scanning, and security testing **before production use**.
 
-### Email not received
-- Verify Gmail SMTP settings.
-- Use a Gmail App Password rather than the normal account password.
-- Check application logs and the spam folder.
+---
 
-### Database connection failure
-- Confirm MySQL is running.
-- Verify database name and credentials.
-- Check the MySQL driver dependency.
+<div align="center">
 
-## 🔒 Security Best Practices
+### 🔐 Built with Spring Boot & Spring Security
 
-- Store passwords using BCrypt.
-- Keep JWT signing secrets and credentials outside source control.
-- Use HTTPS outside local development.
-- Use random, expiring, single-use reset and invitation tokens.
-- Store token hashes where appropriate.
-- Never put passwords in URLs.
-- Avoid exposing raw tokens in application logs.
-- Use generic forgot-password responses to avoid revealing whether an account exists.
-- Add rate limiting to login and password-recovery endpoints.
-- Use concurrency-safe token consumption for production.
-- Require password setup or change for newly provisioned admin accounts.
+**⭐ Star this repository if you find it useful!**
 
-## 🗺️ Future Improvements
-
-- Automated unit and integration tests
-- Global exception handling
-- API documentation using OpenAPI/Swagger
-- Rate limiting and account lockout
-- Email verification
-- Password-change notification emails
-- Production deployment with HTTPS and managed secrets
-- CI/CD integration
-
-## 👨‍💻 Author
-
-**Mohd Javed**
-
-Java | Spring Boot | REST APIs | Spring Security | MySQL
-
-## 📄 License
-
-No license has been specified yet. Add a suitable `LICENSE` file before distributing the project publicly.
+</div>
