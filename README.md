@@ -358,13 +358,13 @@ cd secure-auth-api
 **2. Create the MySQL database**
 
 ```sql
-CREATE DATABASE secure_auth_db;
+CREATE DATABASE spring_security_db;
 ```
 
 **3. Configure the required environment variables**
 
 ```bash
-export DB_URL=jdbc:mysql://localhost:3306/secure_auth_db
+export DB_URL=jdbc:mysql://localhost:3306/spring_security_db
 export DB_USERNAME=your_username
 export DB_PASSWORD=your_password
 ```
